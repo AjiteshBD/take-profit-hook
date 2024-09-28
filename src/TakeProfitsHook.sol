@@ -48,4 +48,15 @@ contract TakeProfitsHook is BaseHook, ERC1155 {
             afterRemoveLiquidityReturnDelta: false
         });
     }
+
+    // Utility Helpers
+    function _setTickLowerLast(PoolId poolId, int24 tickLower) private {
+        tickLowerLasts[poolId] = tickLower;
+    }
+
+    function _getTickLower(int24 actualTick, int24 tickSpacing) private pure returns (int24) {
+        int24 intervals = actualTick / tickSpacing;
+        if (actualTick < 0 && actualTick % tickSpacing != 0) intervals--; // round towards negative infinity
+        return intervals * tickSpacing;
+    }
 }
