@@ -59,4 +59,17 @@ contract TakeProfitsHook is BaseHook, ERC1155 {
         if (actualTick < 0 && actualTick % tickSpacing != 0) intervals--; // round towards negative infinity
         return intervals * tickSpacing;
     }
+
+    // Hooks
+    function afterInitialize(
+        address,
+        PoolKey calldata key,
+        uint160,
+        int24 tick,
+        // Add bytes calldata after tick
+        bytes calldata
+    ) external override onlyPoolManager returns (bytes4) {
+        _setTickLowerLast(key.toId(), _getTickLower(tick, key.tickSpacing));
+        return TakeProfitsHook.afterInitialize.selector;
+    }
 }
