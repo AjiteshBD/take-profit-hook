@@ -96,4 +96,30 @@ contract TakeProfitsHook is BaseHook, ERC1155 {
         _setTickLowerLast(key.toId(), _getTickLower(tick, key.tickSpacing));
         return TakeProfitsHook.afterInitialize.selector;
     }
+
+    // Core Utilities
+    function placeOrder(PoolKey calldata key, int24 tick, uint256 amountIn, bool zeroForOne) external returns (int24) {
+        int24 tickLower = _getTickLower(tick, key.tickSpacing);
+        takeProfitPositions[key.toId()][tickLower][zeroForOne] += int256(amountIn);
+
+        uint256 tokenId = getTokenId(key, tickLower, zeroForOne);
+        // If token id doesn't already exist, add it to the mapping
+        // Not every order creates a new token id, as it's possible for users to add more tokens to a pre-existing order
+        if (!tokenIdExists[tokenId]) {
+            tokenIdExists[tokenId] = true;
+            tokenIdData[tokenId] = TokenData(key, tickLower, zeroForOne);
+        }
+
+        // Mint ERC-1155 tokens to the user
+        _mint(msg.sender, tokenId, amountIn, "");
+        tokenIdTotalSupply[tokenId] += amountIn;
+
+        // Extract the address of the token the user wants to sell
+        address tokenToBeSoldContract = zeroForOne ? Currency.unwrap(key.currency0) : Currency.unwrap(key.currency1);
+
+        // Move the tokens to be sold from the user to this contract
+        IERC20(tokenToBeSoldContract).transferFrom(msg.sender, address(this), amountIn);
+
+        return tickLower;
+    }
 }
